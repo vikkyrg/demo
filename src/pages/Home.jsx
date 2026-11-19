@@ -24,7 +24,7 @@ export default function Home() {
   </div>
 </section>
 {/* CATEGORIES SECTION (10 rich visual cards) */}
-<section className="w-full py-space-3xl bg-surface-canvas" id="categories-section">
+<section className="w-full py-space-3xl bg-surface-canvas scroll-mt-24" id="categories">
 <div className="max-w-[1440px] mx-auto px-margin-md lg:px-margin-lg">
 <div className="flex flex-col md:flex-row md:items-end justify-between mb-space-xl gap-space-sm">
 <div>
