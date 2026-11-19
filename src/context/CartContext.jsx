@@ -1,178 +1,156 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { getAvailableStock } from '../data/inventory';
 
 const CartContext = createContext();
+const CART_KEY = 'buildmart_cart';
 
-const INITIAL_CART = [
-  {
-    id: "ultratech-ppc-50kg",
-    name: "UltraTech PPC Cement 50kg Bag",
-    sku: "SKU: UT-PPC-50",
-    price: 385,
-    unit: "Bag",
-    weightKg: 50,
-    quantity: 40,
-    stagingYard: "Staging Yard B - Basement 2 Ramp",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAIn2ojZXj0A-q0y5qXIqVotoAnDck5BfrbUXWtgJrramyPL9rE4wbMK1nDVdIkoUPA9fJpNdza3maZk07HERwib3B-9Z47KjTknuY_OstM4xyw_JiJkDGxmU9GMzgV6qADRAd64w8iQiXXHtpKEJmgN3OX8vUVzYxf7RAGCQAPJ6u4jQ-Xxuwo_4Gn-4geVh5h9Nr-pCIOiJUmaH0Y5HI1VMQqEBGCcDDABWfa0JzK"
-  },
-  {
-    id: "tata-tiscon-550d-12mm",
-    name: "Tata Tiscon 550D TMT Bar 12mm",
-    sku: "SKU: TT-550D-12",
-    price: 68500,
-    unit: "MT",
-    weightKg: 1000,
-    quantity: 1,
-    stagingYard: "Tower 4 Core Staging",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDVVp1EatobSYVhZvmKgUgUjycoqKHzUJ_3cVykMEPrp9cv4ZNchh0Wzt0XqnNrs9eBOUTwxs3DYNOAA8ttzJrtkyL_nzdWzb4nPYWbKmfvf4LRP42pl6K06J3DnEdDLwniUAzwgp0-w0Egbc8ps4iAzEtUHnmn0mErWrAWgLNs9u-_vgRq_LWR9AKG5b8eGhYmPLTSVO_QnrLiXUKlfreGrye6uKKQy4_bwfIvMAW9"
-  },
-  {
-    id: "asian-paints-apex-ultima-20l",
-    name: "Asian Paints Apex Ultima Exterior 20L",
-    sku: "SKU: AP-ULTIMA-20",
-    price: 5450,
-    unit: "Drum",
-    weightKg: 26,
-    quantity: 2,
-    stagingYard: "Finishing Store 1",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuC9I0Yk1MmITmjVakCPmpdirm9PcTaLF80yAi2BNSUy2HTI88Qu-Mey0C32UzXDRrhhRE0YC6eb5GSmUy-uYxIQeWvOhD3XHQZkqXoMUIJW3_-2nEDxL8vWBPSlWdm4nEesnfJVTf41hSsudlKyfPJSb4Pgyjdm-vMG32MB88XT9ASNq6qTLUUuYkRLCMAl8CT3zW_jWXTcMaA98zrAwoXbqP2iDFFF3hmmq0wpdGE7"
-  },
-  {
-    id: "dr-fixit-pdifin-2k-12kg",
-    name: "Dr. Fixit Pdifin 2K Waterproofing 12kg",
-    sku: "SKU: DF-PDF2K-12",
-    price: 1890,
-    unit: "Kit",
-    weightKg: 12,
-    quantity: 4,
-    stagingYard: "Basement Waterproofing Yard",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCjr4yoJMXb7z4-F7rlxBbKDY_U7tt3t_S-I_9L_aWJJX-ywaWAH9Tl_wAThVzGnno-0iUZF66XVWxduasPx90mw_NQgvEHWWlE9jTzXyX3kv03PQsgBE9u-_lyoGDbTuLZfMjZm--eg5TUtBXVeqkKmri9dWB1bcgp-3UXWjV7JyH5ULJnT1K0dDLGnbvlrlIP0IhehRfu9DUYPd8aWXbVURMzortpAkDTkL7cSI93"
+const readCart = () => {
+  try {
+    const savedItems = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+    return Array.isArray(savedItems)
+      ? savedItems.map((item) => ({
+        ...item,
+        mrp: item.mrp || item.price,
+        stockCount: item.stockCount ?? getAvailableStock(item),
+      }))
+      : [];
+  } catch (error) {
+    console.error('Unable to read saved cart.', error);
+    return [];
   }
-];
+};
 
 export const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState(() => {
-    try {
-      const saved = localStorage.getItem('buildmart_cart');
-      return saved ? JSON.parse(saved) : INITIAL_CART;
-    } catch {
-      return INITIAL_CART;
-    }
-  });
-
+  const [cartItems, setCartItems] = useState(readCart);
   const [toast, setToast] = useState({ show: false, message: '', title: '' });
-  const [coupon, setCoupon] = useState({ code: 'BUILDFIRST', discountPercent: 5, applied: false });
-  const [selectedSlot, setSelectedSlot] = useState('express-60m');
-  const [offloadLogistics, setOffloadLogistics] = useState('hydraulic-crane');
+  const [coupon, setCoupon] = useState({ code: '', discountPercent: 0, applied: false });
+  const [selectedSlot, setSelectedSlot] = useState('standard');
 
   useEffect(() => {
     try {
-      localStorage.setItem('buildmart_cart', JSON.stringify(cartItems));
-    } catch (e) {
-      console.error(e);
+      localStorage.setItem(CART_KEY, JSON.stringify(cartItems));
+    } catch (error) {
+      console.error('Unable to save cart.', error);
     }
   }, [cartItems]);
 
-  const showToast = (title, message = 'Item added to active site cart!') => {
+  const showToast = (title, message = '') => {
     setToast({ show: true, title, message });
-    setTimeout(() => {
-      setToast({ show: false, message: '', title: '' });
-    }, 3200);
+    window.setTimeout(() => setToast({ show: false, title: '', message: '' }), 3200);
   };
 
   const addToCart = (product, quantity = 1) => {
-    setCartItems(prev => {
-      const existing = prev.find(item => item.id === product.id);
-      if (existing) {
-        return prev.map(item =>
-          item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
-        );
+    const availableStock = getAvailableStock(product);
+    if (!product || !Number.isInteger(quantity) || quantity < 1 || availableStock < quantity) {
+      showToast('Unable to add product', availableStock < quantity ? 'Not enough stock is available.' : 'Please choose a valid quantity.');
+      return false;
+    }
+
+    const existing = cartItems.find((item) => item.id === product.id);
+    if (existing && existing.quantity + quantity > availableStock) {
+      showToast('Stock limit reached', `Only ${availableStock} units are currently available.`);
+      return false;
+    }
+
+    setCartItems((items) => {
+      const currentItem = items.find((item) => item.id === product.id);
+      if (currentItem) {
+        return items.map((item) => item.id === product.id
+          ? { ...item, quantity: item.quantity + quantity }
+          : item);
       }
-      return [
-        ...prev,
-        {
-          id: product.id,
-          name: product.shortTitle || product.name,
-          sku: product.sku,
-          price: product.price,
-          unit: product.unit || 'Unit',
-          weightKg: product.weightKg || 50,
-          quantity: quantity,
-          stagingYard: 'General Staging Area',
-          image: product.image
-        }
-      ];
+
+      return [...items, {
+        id: product.id,
+        name: product.shortTitle || product.name,
+        brand: product.brand,
+        sku: product.sku,
+        price: product.price,
+        mrp: product.mrp || product.price,
+        unit: product.unit || 'Unit',
+        weightKg: product.weightKg || 0,
+        stockCount: availableStock,
+        quantity,
+        image: product.image || product.media?.find((media) => media.type === 'image')?.src || '',
+      }];
     });
-    showToast('Added to Site Manifest', `${product.shortTitle || product.name} added to cart!`);
+    showToast('Added to cart', `${product.shortTitle || product.name} was added to your cart.`);
+    return true;
   };
 
-  const updateQuantity = (id, newQty) => {
-    if (newQty <= 0) {
+  const updateQuantity = (id, newQuantity) => {
+    if (newQuantity <= 0) {
       removeFromCart(id);
       return;
     }
-    setCartItems(prev =>
-      prev.map(item => (item.id === id ? { ...item, quantity: newQty } : item))
-    );
+    const item = cartItems.find((cartItem) => cartItem.id === id);
+    if (!item) return;
+    const availableStock = getAvailableStock(item);
+    if (newQuantity > availableStock) {
+      showToast('Stock limit reached', `Only ${availableStock} units are currently available.`);
+      return;
+    }
+    setCartItems((items) => items.map((cartItem) => (
+      cartItem.id === id ? { ...cartItem, quantity: newQuantity } : cartItem
+    )));
   };
 
   const removeFromCart = (id) => {
-    setCartItems(prev => prev.filter(item => item.id !== id));
+    setCartItems((items) => items.filter((item) => item.id !== id));
   };
 
   const clearCart = () => {
     setCartItems([]);
+    setCoupon({ code: '', discountPercent: 0, applied: false });
   };
 
-  const totalItemsCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
-
-  const totalWeightKg = cartItems.reduce((acc, item) => acc + (item.weightKg * item.quantity), 0);
-  const totalWeightTons = (totalWeightKg / 1000).toFixed(2);
-
-  const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const discountAmount = coupon.applied ? Math.round(subtotal * (coupon.discountPercent / 100)) : 0;
-  const taxableAmount = subtotal - discountAmount;
-  const gstAmount = Math.round(taxableAmount * 0.18);
-  const grandTotal = taxableAmount + gstAmount;
+  const totalItemsCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+  const totalWeightKg = cartItems.reduce((total, item) => total + (item.weightKg * item.quantity), 0);
+  const subtotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  const discountAmount = cartItems.reduce(
+    (total, item) => total + (Math.max(0, (item.mrp || item.price) - item.price) * item.quantity),
+    0
+  );
+  const couponDiscount = coupon.applied ? Math.round(subtotal * coupon.discountPercent / 100) : 0;
+  const deliveryCharge = 0;
+  const grandTotal = Math.max(0, subtotal - couponDiscount) + deliveryCharge;
 
   const applyCoupon = (code) => {
-    if (code.toUpperCase() === 'BUILDFIRST' || code.toUpperCase() === 'PRO500') {
-      setCoupon({ code: code.toUpperCase(), discountPercent: 5, applied: true });
-      showToast('Coupon Applied', '5% Contractor Wholesale Discount Applied!');
+    if (code.trim().toUpperCase() === 'BUILDFIRST') {
+      setCoupon({ code: 'BUILDFIRST', discountPercent: 5, applied: true });
       return true;
     }
     return false;
   };
 
-  const removeCoupon = () => {
-    setCoupon({ code: '', discountPercent: 0, applied: false });
-  };
+  const removeCoupon = () => setCoupon({ code: '', discountPercent: 0, applied: false });
 
   return (
-    <CartContext.Provider
-      value={{
-        cartItems,
-        addToCart,
-        updateQuantity,
-        removeFromCart,
-        clearCart,
-        totalItemsCount,
-        totalWeightKg,
-        totalWeightTons,
-        subtotal,
-        discountAmount,
-        gstAmount,
-        grandTotal,
-        coupon,
-        applyCoupon,
-        removeCoupon,
-        selectedSlot,
-        setSelectedSlot,
-        offloadLogistics,
-        setOffloadLogistics,
-        toast,
-        showToast
-      }}
-    >
+    <CartContext.Provider value={{
+      cartItems,
+      addToCart,
+      updateQuantity,
+      removeFromCart,
+      clearCart,
+      totalItemsCount,
+      totalWeightKg,
+      totalWeightTons: (totalWeightKg / 1000).toFixed(2),
+      subtotal,
+      discountAmount,
+      couponDiscount,
+      deliveryCharge,
+      gstAmount: 0,
+      grandTotal,
+      coupon,
+      applyCoupon,
+      removeCoupon,
+      selectedSlot,
+      setSelectedSlot,
+      offloadLogistics: '',
+      setOffloadLogistics: () => {},
+      toast,
+      showToast,
+    }}>
       {children}
     </CartContext.Provider>
   );

@@ -1,336 +1,170 @@
-import React, { useState } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Heart, Minus, Plus, ShoppingCart, Star } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { getAvailableStock } from '../data/inventory';
 import products from '../data/products';
+import ProductCard from '../components/ProductCard';
+
+const money = (amount) => `₹${amount.toLocaleString('en-IN')}`;
 
 export default function ProductDetails() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { addToWishlist, isInWishlist } = useWishlist();
+  const { toggleWishlist, isInWishlist } = useWishlist();
+  const product = products.find((item) => item.id === id);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [quantity, setQuantity] = useState(1);
 
-  // Find product by id or fallback to UltraTech PPC
-  const product = products.find((p) => p.id === id) || products[0];
+  useEffect(() => {
+    setSelectedIndex(0);
+    setQuantity(1);
+  }, [id]);
 
-  const [selectedImage, setSelectedImage] = useState(0);
-  const [orderQty, setOrderQty] = useState(40);
-  const [activeTab, setActiveTab] = useState('specs'); // 'specs', 'mix', 'documents'
+  if (!product) {
+    return (
+      <main className="min-h-screen bg-surface-canvas px-4 pb-20 pt-4 md:pt-32">
+        <section className="mx-auto max-w-2xl rounded-2xl border border-border-subtle bg-white p-10 text-center shadow-sm">
+          <h1 className="text-2xl font-bold text-on-surface">Product not found</h1>
+          <p className="mt-2 text-secondary">This product may no longer be available.</p>
+          <Link to="/products" className="mt-6 inline-flex rounded-xl bg-primary-container px-5 py-3 font-semibold text-white">Browse products</Link>
+        </section>
+      </main>
+    );
+  }
 
-  const currentTierPrice = orderQty >= 200 ? 345 : orderQty >= 50 ? 365 : product.price;
-
-  const handleAddToCart = () => {
-    addToCart(product, orderQty);
-  };
-
-  const handleInstantBuy = () => {
-    addToCart(product, orderQty);
-    navigate('/cart');
-  };
-
+  const media = product.media?.length
+    ? product.media
+    : [{ type: 'image', src: product.image, title: product.name }];
+  const currentMedia = media[selectedIndex] || media[0];
+  const stock = getAvailableStock(product);
   const wishlisted = isInWishlist(product.id);
+  const discountPercent = product.mrp > product.price
+    ? Math.round((product.mrp - product.price) / product.mrp * 100)
+    : 0;
+  const relatedProducts = products
+    .filter((item) => item.id !== product.id && item.category === product.category)
+    .concat(products.filter((item) => item.id !== product.id && item.category !== product.category))
+    .slice(0, 4);
 
   return (
-    <main className="w-full pt-32 bg-surface-canvas min-h-screen pb-20">
-      <div className="flex flex-col w-full">
-        {/* Breadcrumb Navigation Bar */}
-        <div className="w-full bg-white shadow-xs py-3 border-b border-border-subtle">
-          <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
-            <nav className="flex items-center gap-2 text-[13px] text-secondary overflow-x-auto whitespace-nowrap">
-              <Link className="hover:text-primary transition-colors flex items-center gap-1" to="/">
-                <span className="material-symbols-outlined text-[16px]">home</span> Home
-              </Link>
-              <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-              <Link className="hover:text-primary transition-colors" to="/products">
-                {product.category}
-              </Link>
-              <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-              <span className="text-on-surface font-semibold truncate max-w-sm">{product.shortTitle || product.name}</span>
-            </nav>
-          </div>
-        </div>
+    <main className="min-h-screen bg-surface-canvas pb-20 pt-4 md:pt-32">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
+        <nav className="mb-6 flex items-center gap-2 text-sm text-secondary">
+          <Link to="/" className="hover:text-primary-container">Home</Link><span>/</span>
+          <Link to="/products" className="hover:text-primary-container">Products</Link><span>/</span>
+          <span className="truncate text-on-surface">{product.name}</span>
+        </nav>
 
-        {/* Main Product Stage Container */}
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-8 w-full flex flex-col gap-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Gallery Column (5 cols) */}
-            <div className="lg:col-span-5 flex flex-col gap-4 sticky top-28">
-              {/* Main Image Stage */}
-              <div className="relative aspect-square w-full rounded-2xl bg-white border border-border-subtle shadow-sm flex items-center justify-center p-6 overflow-hidden">
-                <img
-                  src={product.gallery ? product.gallery[selectedImage] || product.image : product.image}
-                  alt={product.name}
-                  className="max-h-full max-w-full object-contain"
+        <section className="grid gap-8 lg:grid-cols-2">
+          <div className="min-w-0">
+            <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl border border-border-subtle bg-white p-6 shadow-sm sm:aspect-[4/3]">
+              {currentMedia.type === 'video' ? (
+                <video
+                  key={currentMedia.src}
+                  src={currentMedia.src}
+                  poster={currentMedia.poster}
+                  controls
+                  playsInline
+                  preload="none"
+                  className="h-full w-full rounded-xl object-contain"
+                  aria-label={currentMedia.title || `${product.name} demonstration video`}
                 />
-                <div className="absolute top-4 left-4 flex flex-col gap-1.5">
-                  <span className="bg-tertiary text-white font-bold text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider shadow-xs">
-                    60m Express Live
-                  </span>
-                  <span className="bg-deal-amber text-slate-900 font-bold text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider shadow-xs">
-                    IS 1489 Part 1 Certified
-                  </span>
-                </div>
-
-                <button
-                  onClick={() => addToWishlist(product)}
-                  className={`absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center shadow-md transition-colors cursor-pointer ${
-                    wishlisted
-                      ? 'bg-deal-amber text-slate-900'
-                      : 'bg-white text-secondary hover:text-primary'
-                  }`}
-                  title={wishlisted ? 'Saved in BOQ' : 'Add to BOQ'}
-                >
-                  <span className="material-symbols-outlined text-[20px]">
-                    {wishlisted ? 'favorite' : 'bookmark_add'}
-                  </span>
-                </button>
-              </div>
-
-              {/* Thumbnails */}
-              {product.gallery && product.gallery.length > 1 && (
-                <div className="flex items-center gap-3">
-                  {product.gallery.map((imgUrl, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setSelectedImage(idx)}
-                      className={`w-20 h-20 rounded-xl bg-white border-2 p-2 flex items-center justify-center cursor-pointer transition-all ${
-                        selectedImage === idx ? 'border-primary-container shadow-xs' : 'border-border-subtle hover:border-slate-300'
-                      }`}
-                    >
-                      <img src={imgUrl} alt={`Thumbnail ${idx}`} className="max-h-full max-w-full object-contain" />
-                    </button>
-                  ))}
-                </div>
+              ) : (
+                <img
+                  src={currentMedia.src}
+                  alt={currentMedia.title || product.name}
+                  fetchPriority="high"
+                  className="h-full w-full object-contain"
+                />
               )}
-
-              {/* Quick Engineer Utilities Card */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-border-subtle flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary-container/10 flex items-center justify-center text-primary-container shrink-0">
-                    <span className="material-symbols-outlined text-[20px]">picture_as_pdf</span>
-                  </div>
-                  <div>
-                    <span className="text-[13px] font-bold text-on-surface block leading-tight">
-                      NABL Lab Test Certificate
-                    </span>
-                    <span className="text-[11px] text-secondary">Batch #TC-2026-NABL-09 • 1.2 MB</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => alert('Downloading NABL Lab Test Report (PDF)...')}
-                  className="px-3 py-1.5 bg-surface-container-low hover:bg-surface-container text-on-surface font-semibold text-[12px] rounded-lg border border-border-subtle transition-colors cursor-pointer shrink-0"
-                >
-                  Download Report
-                </button>
+              {discountPercent > 0 && <span className="absolute left-4 top-4 rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white">{discountPercent}% OFF</span>}
+            </div>
+            {media.length > 1 && (
+              <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
+                {media.map((item, index) => (
+                  <button
+                    key={`${item.type}-${item.src}`}
+                    type="button"
+                    onClick={() => setSelectedIndex(index)}
+                    aria-label={`Show ${item.type === 'video' ? 'video' : 'image'} ${index + 1}`}
+                    aria-pressed={selectedIndex === index}
+                    className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 bg-white p-1 ${selectedIndex === index ? 'border-primary-container' : 'border-border-subtle'}`}
+                  >
+                    {item.type === 'video'
+                      ? <img src={item.poster} alt="" loading="lazy" className="h-full w-full object-cover" />
+                      : <img src={item.src} alt="" loading="lazy" className="h-full w-full object-contain" />}
+                    {item.type === 'video' && <span className="absolute inset-0 flex items-center justify-center bg-black/25 text-xs font-bold text-white">VIDEO</span>}
+                  </button>
+                ))}
               </div>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-border-subtle bg-white p-6 shadow-sm sm:p-8">
+            <p className="text-sm font-bold uppercase tracking-wide text-secondary">{product.brand} <span className="mx-1 text-slate-300">·</span> {product.category}</p>
+            <h1 className="mt-3 text-2xl font-bold leading-tight tracking-tight text-on-surface sm:text-3xl">{product.name}</h1>
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+              <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 font-bold text-amber-800"><Star size={15} fill="currentColor" /> {product.rating}</span>
+              <span className="text-secondary">{product.reviewsCount} customer reviews</span>
+              <span className={`font-semibold ${stock > 0 ? 'text-emerald-700' : 'text-red-600'}`}>{stock > 0 ? `${stock.toLocaleString()} in stock` : 'Out of stock'}</span>
             </div>
 
-            {/* Product Configuration & Commerce Column (7 cols) */}
-            <div className="lg:col-span-7 flex flex-col gap-6">
-              {/* Header Title & Pricing Cluster */}
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-border-subtle flex flex-col gap-4">
-                <div className="flex items-center gap-2 text-[12px]">
-                  <span className="bg-surface-container text-secondary font-bold px-2.5 py-0.5 rounded">
-                    {product.brand}
-                  </span>
-                  <span className="text-secondary font-mono">{product.sku}</span>
-                  <span className="text-outline-variant">•</span>
-                  <div className="flex items-center gap-1 text-deal-amber font-bold">
-                    <span className="material-symbols-outlined text-[16px]">star</span>
-                    <span>{product.rating}</span>
-                    <span className="text-secondary font-normal">({product.reviewsCount} Contractor Reviews)</span>
-                  </div>
-                </div>
+            <div className="mt-6 flex flex-wrap items-baseline gap-3 border-y border-border-subtle py-5">
+              <span className="text-3xl font-extrabold text-on-surface">{money(product.price)}</span>
+              {product.mrp > product.price && <span className="text-base text-secondary line-through">{money(product.mrp)}</span>}
+              <span className="text-sm text-secondary">/ {product.unit}</span>
+              {discountPercent > 0 && <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">Save {discountPercent}%</span>}
+            </div>
 
-                <h1 className="text-[22px] sm:text-[26px] font-bold text-on-surface tracking-tight font-headline-lg leading-snug">
-                  {product.fullName || product.name}
-                </h1>
+            <p className="mt-5 leading-7 text-secondary">{product.description}</p>
 
-                {/* Price Display */}
-                <div className="p-4 rounded-xl bg-surface-container-low/60 border border-border-subtle flex flex-col sm:flex-row sm:items-baseline justify-between gap-2">
-                  <div className="flex items-baseline gap-3">
-                    <span className="text-[30px] font-bold text-on-surface font-price-hero">
-                      ₹{currentTierPrice.toLocaleString()}
-                    </span>
-                    <span className="text-[15px] text-secondary line-through">
-                      ₹{product.mrp.toLocaleString()}
-                    </span>
-                    <span className="text-[13px] text-secondary font-medium">/ {product.unit}</span>
-                  </div>
-                  <span className="text-[12px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                    Save ₹{(product.mrp - currentTierPrice).toLocaleString()} (12.5% Off MRP)
-                  </span>
-                </div>
-
-                <p className="text-[14px] text-secondary leading-relaxed">
-                  {product.description}
-                </p>
-
-                {/* Wholesale Volume Tiering Table */}
-                <div className="flex flex-col gap-2 pt-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12px] font-bold text-secondary uppercase tracking-wider">
-                      Wholesale Volume Tiering (Tier Rates Auto-Applied)
-                    </span>
-                    <span className="text-[11px] text-tertiary font-bold">Free Tipper Freight</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                    {product.volumeTiers?.map((tier, idx) => (
-                      <div
-                        key={idx}
-                        className={`p-3 rounded-xl border-2 flex flex-col gap-1 transition-all ${
-                          (idx === 0 && orderQty < 50) || (idx === 1 && orderQty >= 50 && orderQty < 200) || (idx === 2 && orderQty >= 200)
-                            ? 'border-primary-container bg-primary-container/5 shadow-xs'
-                            : 'border-border-subtle bg-white'
-                        }`}
-                      >
-                        <span className="text-[11px] font-bold text-secondary uppercase">{tier.label}</span>
-                        <div className="flex items-baseline justify-between">
-                          <span className="text-[16px] font-bold text-on-surface font-price-card">₹{tier.price}</span>
-                          <span className="text-[11px] text-secondary">/ {product.unit.split(' ')[0]}</span>
-                        </div>
-                        <span className="text-[11px] text-primary-container font-semibold">{tier.range}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Quantity Selector & Action CTAs */}
-                <div className="flex flex-col gap-4 pt-4 border-t border-border-subtle">
-                  <div className="flex items-center gap-4">
-                    <span className="text-[13px] font-bold text-on-surface">Quantity Required:</span>
-                    <div className="flex items-center bg-white border border-border-subtle rounded-lg shadow-xs overflow-hidden">
-                      <button
-                        onClick={() => setOrderQty(Math.max(1, orderQty - 5))}
-                        className="w-10 h-10 flex items-center justify-center text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">remove</span>
-                      </button>
-                      <input
-                        type="number"
-                        value={orderQty}
-                        onChange={(e) => setOrderQty(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-16 h-10 text-center text-[15px] font-bold text-on-surface bg-transparent focus:outline-none appearance-none"
-                      />
-                      <button
-                        onClick={() => setOrderQty(orderQty + 5)}
-                        className="w-10 h-10 flex items-center justify-center text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">add</span>
-                      </button>
-                    </div>
-
-                    <div className="flex items-baseline gap-1 text-[13px] text-secondary">
-                      <span>Total:</span>
-                      <strong className="text-on-surface text-[16px]">
-                        ₹{(currentTierPrice * orderQty).toLocaleString()}
-                      </strong>
-                      <span>({(orderQty * (product.weightKg || 50) / 1000).toFixed(2)} MT)</span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row items-center gap-3">
-                    <button
-                      onClick={handleAddToCart}
-                      className="w-full sm:flex-1 h-12 rounded-xl bg-primary-container hover:bg-safety-orange-hover text-white font-bold text-[14px] flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98] cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">shopping_bag</span>
-                      Add to Site Cart
-                    </button>
-
-                    <button
-                      onClick={handleInstantBuy}
-                      className="w-full sm:flex-1 h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-[14px] flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98] cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">bolt</span>
-                      Buy Now (Instant Dispatch)
-                    </button>
-
-                    <button
-                      onClick={() => addToWishlist(product)}
-                      className="w-full sm:w-auto h-12 px-4 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-semibold text-[13px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">format_list_bulleted_add</span>
-                      Add to BOQ
-                    </button>
-                  </div>
-                </div>
-
-                {/* Delivery Confidence Badges */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-border-subtle text-[12px] text-secondary">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary text-[18px]">bolt</span>
-                    <span>60-Min Express Dispatch</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary text-[18px]">precision_manufacturing</span>
-                    <span>Crane Offloading Included</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary text-[18px]">verified</span>
-                    <span>Direct Mill Invoice</span>
-                  </div>
-                </div>
+            <div className="mt-6 flex flex-wrap items-center gap-4">
+              <span className="font-semibold text-on-surface">Quantity</span>
+              <div className="flex items-center rounded-lg border border-border-subtle">
+                <button type="button" aria-label="Decrease quantity" onClick={() => setQuantity((value) => Math.max(1, value - 1))} className="p-2.5 text-secondary hover:text-on-surface"><Minus size={16} /></button>
+                <span className="min-w-10 text-center font-semibold">{quantity}</span>
+                <button type="button" aria-label="Increase quantity" onClick={() => setQuantity((value) => Math.min(stock, value + 1))} disabled={quantity >= stock} className="p-2.5 text-secondary hover:text-on-surface disabled:opacity-40"><Plus size={16} /></button>
               </div>
+              <span className="text-sm text-secondary">Total: <strong className="text-on-surface">{money(product.price * quantity)}</strong></span>
+            </div>
 
-              {/* Technical Specifications & TDS Table */}
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-border-subtle flex flex-col gap-4">
-                <div className="flex items-center gap-4 border-b border-border-subtle pb-3">
-                  <button
-                    onClick={() => setActiveTab('specs')}
-                    className={`font-bold text-[14px] pb-1 cursor-pointer transition-colors ${
-                      activeTab === 'specs'
-                        ? 'text-primary-container border-b-2 border-primary-container'
-                        : 'text-secondary hover:text-on-surface'
-                    }`}
-                  >
-                    Engineering Specifications
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('mix')}
-                    className={`font-bold text-[14px] pb-1 cursor-pointer transition-colors ${
-                      activeTab === 'mix'
-                        ? 'text-primary-container border-b-2 border-primary-container'
-                        : 'text-secondary hover:text-on-surface'
-                    }`}
-                  >
-                    Jobsite Mix Compatibility
-                  </button>
-                </div>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <button type="button" onClick={() => addToCart(product, quantity)} disabled={stock < 1} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary-container px-5 py-3.5 font-bold text-white transition-colors hover:bg-safety-orange-hover disabled:cursor-not-allowed disabled:opacity-50">
+                <ShoppingCart size={19} /> Add to Cart
+              </button>
+              <button type="button" onClick={() => toggleWishlist(product)} aria-pressed={wishlisted} className={`inline-flex items-center justify-center gap-2 rounded-xl border px-5 py-3.5 font-semibold transition-colors ${wishlisted ? 'border-red-200 bg-red-50 text-red-600' : 'border-border-subtle text-on-surface hover:bg-slate-50'}`}>
+                <Heart size={19} fill={wishlisted ? 'currentColor' : 'none'} /> {wishlisted ? 'In Wishlist' : 'Add to Wishlist'}
+              </button>
+            </div>
 
-                {activeTab === 'specs' && (
-                  <div className="divide-y divide-border-subtle text-[13px]">
-                    {product.specifications?.map((spec, idx) => (
-                      <div key={idx} className="py-2.5 flex justify-between gap-4">
-                        <span className="text-secondary font-medium">{spec.key}</span>
-                        <span className="text-on-surface font-semibold text-right">{spec.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {activeTab === 'mix' && (
-                  <div className="flex flex-col gap-3 text-[13px]">
-                    <p className="text-secondary">
-                      Recommended casting ratios for structural columns, footings, and slabs:
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="p-3 rounded-lg bg-surface-container-low border border-border-subtle">
-                        <strong className="text-on-surface block font-bold">M20 Grade Mix (1 : 1.5 : 3)</strong>
-                        <span className="text-[12px] text-secondary">General RCC Slabs, Beams, Staircases</span>
-                      </div>
-                      <div className="p-3 rounded-lg bg-surface-container-low border border-border-subtle">
-                        <strong className="text-on-surface block font-bold">M25 Grade Mix (1 : 1 : 2)</strong>
-                        <span className="text-[12px] text-secondary">Heavy Load Columns &amp; Raft Foundations</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+            <div className="mt-6 rounded-xl bg-slate-50 p-4 text-sm">
+              <p className="font-semibold text-on-surface">Delivery information</p>
+              <p className="mt-1 text-secondary">Free standard delivery on this order. Estimated delivery in 3–5 business days.</p>
             </div>
           </div>
-        </div>
+        </section>
+
+        <section className="mt-10 rounded-2xl border border-border-subtle bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-on-surface">Specifications</h2>
+          <dl className="mt-4 divide-y divide-border-subtle">
+            {product.specifications?.map((spec) => (
+              <div key={spec.key} className="flex flex-col justify-between gap-1 py-3 text-sm sm:flex-row">
+                <dt className="text-secondary">{spec.key}</dt><dd className="font-semibold text-on-surface sm:text-right">{spec.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+
+        {relatedProducts.length > 0 && (
+          <section className="mt-12">
+            <h2 className="mb-5 text-2xl font-bold text-on-surface">Related products</h2>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {relatedProducts.map((item) => <ProductCard key={item.id} product={item} />)}
+            </div>
+          </section>
+        )}
       </div>
     </main>
   );

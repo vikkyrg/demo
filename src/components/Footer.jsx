@@ -17,7 +17,7 @@ export const Footer = () => {
               </span>
             </div>
             <p className="text-[13px] text-slate-400 max-w-sm leading-relaxed">
-              India's premier high-velocity B2B digital storefront for construction sites, general contractors, and trade professionals. Guaranteed testing certifications & rapid on-site staging dispatch.
+              A simple online store for quality construction materials from trusted brands, delivered to your project.
             </p>
             <div className="flex items-center gap-3 text-sm text-slate-300">
               <span className="material-symbols-outlined text-primary-fixed text-[20px]">verified_user</span>
@@ -37,15 +37,34 @@ export const Footer = () => {
             </ul>
           </div>
 
-          {/* Trade Services */}
+          {/* Policy */}
           <div className="flex flex-col gap-3">
-            <h4 className="text-[14px] font-bold text-white uppercase tracking-wider">Jobsite Logistics</h4>
-            <ul className="flex flex-col gap-2 text-[13px] text-slate-400">
-              <li><Link to="/orders" className="hover:text-primary-fixed transition-colors">Live Dispatch GPS Tracking</Link></li>
-              <li><Link to="/wishlist" className="hover:text-primary-fixed transition-colors">Contractor BOQ Schedule Tool</Link></li>
-              <li><span className="text-slate-400">30-Day Revolving Trade Credit</span></li>
-              <li><span className="text-slate-400">Hydraulic Crane Offloading</span></li>
-              <li><span className="text-slate-400">WhatsApp BOQ Instant Quote</span></li>
+            <h4 className="text-[16px] font-semibold text-white tracking-wide">Policy</h4>
+            <ul className="flex flex-col gap-2.5 text-[14px] text-slate-300">
+              <li>
+                <Link to="/policy/refund" className="flex items-center gap-2 hover:text-primary-fixed transition-colors">
+                  <span className="material-symbols-outlined text-[15px] text-slate-400">chevron_right</span>
+                  <span>Refund Policy</span>
+                </Link>
+              </li>
+              <li>
+                <Link to="/policy/privacy" className="flex items-center gap-2 hover:text-primary-fixed transition-colors">
+                  <span className="material-symbols-outlined text-[15px] text-slate-400">chevron_right</span>
+                  <span>Privacy Policy</span>
+                </Link>
+              </li>
+              <li>
+                <Link to="/policy/terms" className="flex items-center gap-2 hover:text-primary-fixed transition-colors">
+                  <span className="material-symbols-outlined text-[15px] text-slate-400">chevron_right</span>
+                  <span>Terms of Service</span>
+                </Link>
+              </li>
+              <li>
+                <Link to="/policy/shipping" className="flex items-center gap-2 hover:text-primary-fixed transition-colors">
+                  <span className="material-symbols-outlined text-[15px] text-slate-400">chevron_right</span>
+                  <span>Shipping Policy</span>
+                </Link>
+              </li>
             </ul>
           </div>
 
